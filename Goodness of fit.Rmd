@@ -1,0 +1,296 @@
+---
+title: "Goodness of fit"
+author: "Victoria Landaberry"
+date: "7 de abril de 2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Goodness of fit: definition of the problem
+
+In these approach we have n observations of a random variable X, and we want to test if the X r.v follows a particular distribution (Normal, Poisson, Exponential...) The first usefull tool to perform this decision is to use an histogram of the dataset. We are going to start plotting the histograms to see the difference between them in order to identify the candidate. 
+
+```{r }
+nomr<-rnorm(1000,0,1) #generate a sample of 1000 observations from a normal variable with mean 0 and std. 1
+nomr2<-rnorm(1000,50,10) #generate a sample of 1000 observations from a normal variable with mean 50 and std. 10
+unif<-runif(1000,0,1) #generate a sample of 1000 observation of a uniform distribution between 0 and 1
+chi<-rchisq(1000,2)# generate a sample of 1000 observations of a chi2 distribution with 2 degree of freedom
+exp<-rexp(1000,rate=0.5) # generate a sample of 1000 observations for an exponential variable with 1/lambda equal to 0.5, lambda equal to 2
+pois<-rpois(1000,lambda=2) # generate a  sample of 1000 observation for a poisson random variable with lambda equal to 2
+ber<-rbinom(1000,1,0.5) #generate a sample of 1000 observations for a bernoulli random variable with probability 0.5
+exp2<-rexp(1000,rate=1)# generate a sample of 1000 observations for an exponential variable with 1/lambda equal to 1
+
+```
+
+The histograms are displayed in the followings plots. 
+
+
+```{r , echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+library(plotly)
+
+fig1 <- plot_ly(x=nomr, type = 'histogram', name="Normal(0,1)",   histnorm = "probability")
+
+
+fig2 <- plot_ly(x =nomr2, type = 'histogram', name="Normal(50,10)",  histnorm = "probability")
+
+
+fig3 <-  plot_ly(x =chi, type = 'histogram', name="Chi(2)",  histnorm = "probability")
+
+
+fig4 <- plot_ly(x =exp, type = 'histogram', name="exp(0.5)",  histnorm = "probability")
+
+fig5 <- plot_ly(x =unif, type = 'histogram', name="unif[0,1]",  histnorm = "probability")
+
+fig6 <- plot_ly(x =pois, type = 'histogram', name="pois(2)",  histnorm = "probability")
+
+fig7 <- plot_ly(x =ber, type = 'histogram', name="ber(0.5)",  histnorm = "probability")
+
+
+fig8 <- plot_ly(x =exp2, type = 'histogram', name="exp(1)",  histnorm = "probability")
+
+fig <- subplot(fig1, fig2, fig3, fig4, fig5, fig6, fig7,fig8, nrows = 3) %>%
+  layout(plot_bgcolor='#e5ecf6', 
+         xaxis = list( 
+           zerolinecolor = '#ffff', 
+           zerolinewidth = 2, 
+           gridcolor = 'ffff'), 
+         yaxis = list( 
+           zerolinecolor = '#ffff', 
+           zerolinewidth = 2, 
+           gridcolor = 'ffff'), title="Histograms for different distributions (Frecuency of ocurrence)")
+fig
+```
+**The first figure**, that corresponds to a Standard Gaussian variable (with mean 0 and std deviation 1), is centered arround 0 and acumulate probability mostly between -3 and 3. **The second figure**, that correspond to a Normal variable with mean 50 and standard deviation 10, present the mode at 50 and then it takes values on the right and left of the center. **The third distribution** only takes values positives, is a chi2 distribution. Then, in the **figure four** we have an exponential distribution, that seems difficult to differentiate from the chi2 distribution, that´s because a **Chi squared distribution with 2 degree of freedom it´s equal to an exponential variable with rate 0.5**. See the difference with the **last plot** that represent an exponential variable with rate 1. The plot of the uniform distribution between 0 and 1 shows that the variable takes values between those values, and that the probability is "uniformly distributed". The **poisson distribution** takes values that are only positives. If we put the mouse over the plot, we can see that it takes only discrete values wich help us to differenciate this distribution from an exponential or Chi2 plot. The first plot in the third line is the plot of a **Bernoulli** random variable with p=0.5, only takes two values, and the probability of seen each one of them is approximately 0.5.
+
+ Parametric hypothesis testing is a particular case of goodness of fit testing . However, in the context of parametric hypothesis testing, we assume that the data distribution  comes from some parametric statistical model for example a Bernoulli distribution , and we ask if the distribution  belongs to a submodel where we restringe the possible values of p  defined in Ho or other values defined in H1.  In parametric hypothesis testing, we allow only a small set of alternatives,those defined in H1, where as in the goodness of fit testing, we allow the alternative to be anything.
+
+
+## Discrete goodness of fit test
+
+
+In discrete goodness of fit test we use Categorical linkelihoods. 
+Imagine that we have the following example: We have information from the zodiac sign  of each of the top 250 billionaires who featured on Forbes magazine's latest Billionaire List. We have 12 zodiac signs, and we want to know if in view of the data is there statistical evidence that sucessfull people are more likely to be born under some sign?
+
+The question formulation matters, as we are or not introducing causality in the analysis.It's the same asking the question that there is statistical evidence that the sign you are born determines or have effects on the wealth you will have?
+
+
+```{r , message=FALSE, warning=FALSE, paged.print=FALSE}
+
+zodiac<-c("Libra", "Pisces","Cancer","Taurus","Leo","Scorpio", "Gemini","Aries","Acquarius","Virgo","Saggitarious","Capricorn")
+billionaires<-c(27,22,20,20,20,16,15,15,12,11,8,8)
+total=sum(billionaires)
+observed_p=billionaires/total
+print("The sum of estimated probabilities must be one: Result")
+print(sum(observed_p))
+
+```
+
+We have a total of 192 observations, and we want to test if the probability of being part of Fortune is distributed uniform between the zodiac signs. Ho= P_i =1/K where K is the number of signs, so H0=1/12  or any other value of P. 
+We define the H0 hypothesis in our vector p_0. 
+
+```{r , message=FALSE, warning=FALSE, paged.print=FALSE}
+p_0<-rep(1/12,12)
+
+```
+
+
+To test H0 against any other distribution we use a Chi squared test, where the freedom of degree are 12. This is done in R usign  the function chi.sqtest(x, p_0) where the X is the billionaires vector that is the total number of people that we see in our sample from each sign, and the p_0 is the probability that we are testing under the null. 
+
+```{r , message=FALSE, warning=FALSE, paged.print=FALSE}
+p_0<-rep(1/12,12)
+
+chisq.test(billionaires,p=p_0)
+
+```
+
+The result displayed give us the degree of freedom of the test that is K-1. In this case we have 12 categories so, d=11 then we get the value of the statistic 23.237 and the p value. We have to remember that the p value is the probability value where we goes from not reject to reject H0. 
+
+
+Imagine that we want to plot the test result. We can use the nhstplot. Remember to install the package before running the next line (install.packages("nhstplot")) The first argument is value of the test statistic obtained previously. The second argument is the degree of freedom. 
+
+
+What is the result in terms of reject or not reject our null?
+
+if alpha is lower than the p-value we fail to reject. If alpha is higher than the p value we reject Ho. 
+In this case por aplha 0.05, we reject H0. For alpha equat to 0.01 we fail to reject H0. As a result we don´t have every strong evidence or unidisputable to reject that the zodiac sign is uniformly distributed among Forbes billionairse. 
+
+
+```{r , message=FALSE, warning=FALSE, paged.print=FALSE}
+library(nhstplot)
+plotchisqtest(chisq = 23.237, df = 11)
+
+```
+
+Another example of this test can be found here  [Test of goodness of fit example][https://www.youtube.com/watch?v=6YhC45HIlAQ]
+
+You can perform the excersises from Lecture 15 using this tool. 
+
+
+## Goodness of fit for the continuous case
+### cdfs teoric and empirical
+
+We can plot and obtain cdfs for continuous known distributions in R. Let´s see some examples
+1. standard normal distribution 2. 2. Uniform distribution 3. Exponential distribution rate 1
+
+
+```{r , message=FALSE, warning=FALSE, paged.print=FALSE}
+
+par(mfrow=c(2,2))
+library(stats)
+curve(pnorm, from = -10, to = 10, ylab="N(0,1)")
+curve(pnorm,mean=10, sd=5, from = -10, to = 10, ylab="N(10,5)")
+curve(pexp, rate=1, from=-1,to=10, ylab="exp(1)")
+curve(punif,min=0, max=1, from=-1,to=2, ylab="Unif[0,1]")
+
+```
+
+
+What happens if we have some sample data and we want to obtain from the sample data the plot?
+
+Let's see the example from excersise from lecture 16. Example of Empirical CDF. 
+
+First we have to define a vector with our sample data and use the ecdf function over the data. Then we plot the CDF element and we get the plot. As the number of observations is small, it´s seems to be a discrete rv instead of a continuous one. 
+
+```{r , message=FALSE, warning=FALSE, paged.print=FALSE}
+
+x<-c(5,2,1.5,-3,7)
+# calculate CDF 
+CDF <- ecdf(x)
+# draw the cdf plot
+plot( CDF)
+
+#get unique points 
+knots(CDF)
+
+#get summary points
+ summary(CDF)
+ 
+#get the distribution function
+summary.stepfun(CDF)
+```
+
+### Kolmogrov-smirnov test
+We want to test if a sample follows for example an exponential distribution. We are goign to compare the empirical cdf with the true cdf under H0, and we are going to use the worst difference between them. This is the **kolmogrov-smirnov test**. This worst difference must be at one of the values obtained from the empirical distribution, and it is a number between 0 and 1.
+
+We present some examples of this test. We have data from lecture 16 Practice: Compute the Kolmogorov-Smirnov Test Statistic and we first plot our empirical cdf. We want to test it it´s uniform distributed between [0,1] and for this propouse we are going to perform a KS test.
+
+```{r , message=FALSE, warning=FALSE, paged.print=FALSE}
+x<-c(0.8,0.7,0.4,0.7,0.2)
+CDF <- ecdf(x)
+plot(CDF)
+
+```
+
+
+```{r , message=FALSE, warning=FALSE, paged.print=FALSE}
+
+
+test<-ks.test(x,"punif",0,1)
+test
+print(test$statistic)
+
+statistic=sqrt(length(x))*test$statistic
+print(statistic)
+```
+We have a p value of 0.7591. this means that for an alpha 0.05, since the pvalue is higher than our alpha value we do not reject that the sample comes from an uniform random variable [0,1]. Let´s see an example of rejection. We generate a sample of 100 observations from a uniform random variable between 0 and 1, and we want to test using KS if this sample follows a normal standard distribution. By contruction we know this is not true, so we should reject H0. 
+
+ 
+```{r , message=FALSE, warning=FALSE, paged.print=FALSE}
+sample<-runif(1000,min=0,max=1)
+
+ks.test(sample,"pnorm")
+
+```
+As we can see the p value is really small, we have unindisputable evidence that the sample does not correspond to a standard  normal distribution. 
+
+### Lilliefors (Kolmogorov-Smirnov) test for normality
+
+If we do not know the parameters of the distribution and we want to test if X follows a normal distribution we can use the Lilliefors (Kolmogorov-Smirnov) test for normality. For this propouse we can use the nrotest package in r and the function lillie.test(x). Lets use the random sample generated in the last example and test if it follows a normal distribution. 
+
+
+```{r , message=FALSE, warning=FALSE, paged.print=FALSE}
+library("nortest")
+lillie.test(sample)
+
+```
+As we can see the p value is really small, we have unindisputable evidence that the sample does not correspond to a  normal distribution. In the following example we try with a sample that is by contruction normal distributed. 
+
+
+```{r , message=FALSE, warning=FALSE, paged.print=FALSE}
+norm<-rnorm(1000)
+lillie.test(norm)
+
+```
+
+As you can see we can not reject H0.
+
+## QQ plots 
+
+
+Its an informal but useful method for goodness of fitting testing. It provides a visual method for determining wheter or not a data set has a certain distribution. It´s easier than check visualy directly from the cdf theoric and empirical. 
+
+
+Let´s produce some qqplots for a standard normal distribution samples with different sizes
+
+
+```{r , message=FALSE, warning=FALSE, paged.print=FALSE}
+sample1<-rnorm(10)
+sample2<-rnorm(100)
+sample3<-rnorm(1000)
+sample4<-rnorm(10000)
+
+par(mfrow=c(2,2))
+
+qqnorm(sample1, pch = 1, frame = FALSE)
+qqnorm(sample2, pch = 1, frame = FALSE)
+qqnorm(sample3, pch = 1, frame = FALSE)
+qqnorm(sample4, pch = 1, frame = FALSE)
+
+```
+
+We can solve the excersises in te lecture by plotting qq for the different distributions. 
+
+
+```{r , message=FALSE, warning=FALSE, paged.print=FALSE}
+sample1<-rnorm(10)
+sample2<-rnorm(100)
+sample3<-rnorm(1000)
+sample4<-rnorm(10000)
+
+par(mfrow=c(2,2))
+
+qqnorm(sample1, pch = 1, frame = FALSE)
+qqline(sample1, col = "steelblue", lwd = 2)
+qqnorm(sample2, pch = 1, frame = FALSE)
+qqline(sample2, col = "steelblue", lwd = 2)
+qqnorm(sample3, pch = 1, frame = FALSE)
+qqline(sample3, col = "steelblue", lwd = 2)
+qqnorm(sample4, pch = 1, frame = FALSE)
+qqline(sample4, col = "steelblue", lwd = 2)
+
+```
+
+
+And this is what we propose here n=1000
+
+```{r , message=FALSE, warning=FALSE, paged.print=FALSE}
+sample1<-runif(10000, min=0, max=10)
+sample2<-rnorm(10000, mean=0, sd=sqrt(10))
+sample3<-rnorm(10000, mean=0, sd=1)
+sample4<-rexp(10000, rate=1)
+
+par(mfrow=c(2,2))
+
+qqnorm(sample1, pch = 1, frame = FALSE, ylab="unif[0,1]")
+qqline(sample1, col = "steelblue", lwd = 2)
+qqnorm(sample2, pch = 1, frame = FALSE,, ylab="Nom(0,10)")
+qqline(sample2, col = "steelblue", lwd = 2)
+qqnorm(sample3, pch = 1, frame = FALSE,ylab="Nom(0,1)")
+qqline(sample3, col = "steelblue", lwd = 2)
+qqnorm(sample4, pch = 1, frame = FALSE, ylab="exp(1)")
+qqline(sample4, col = "steelblue", lwd = 2)
+
+```
